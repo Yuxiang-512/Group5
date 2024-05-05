@@ -1,10 +1,14 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QToolBar, QAction, QPushButton
+from PyQt5.QtWidgets import QApplication, QMainWindow, QToolBar, QAction, QPushButton, QWidget, QVBoxLayout
 from config import ConfigDialog
 from import_data import *
 import pandas as pd
+from model_plot import DynamicPlot
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+import subprocess
+import json
 
-file_name = None
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -12,20 +16,30 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("My Application")
         self.setGeometry(100, 100, 800, 600)  # 设置窗口大小和位置
 
+        self.file_name = None
+
         # 创建工具栏
         self.toolbar = self.addToolBar("Main Toolbar")
-
-        # 添加导入和配置按钮
         self.add_toolbar_actions()
+
+        # 使用 QVBoxLayout 管理器来布局
+        self.main_widget = QWidget(self)
+        self.setCentralWidget(self.main_widget)
+        self.layout = QVBoxLayout(self.main_widget)
+
+        # 添加线性图显示区域
+        self.plot = DynamicPlot(window_width=100, y_range=(0, 20))
+        self.layout.addWidget(self.plot)
+
+        # 添加启动按钮
         self.init_start()
+        
 
     def init_start(self):
         self.start_button = QPushButton("Start", self)
         self.start_button.setFixedSize(200, 50)
-        self.start_button.move(100, 100)  # 设置按钮的位置
-
         self.start_button.clicked.connect(self.process_excel)
-        self.setCentralWidget(self.start_button)
+        self.layout.addWidget(self.start_button)  # 添加按钮到布局中
 
     def open_config_dialog(self):
         dialog = ConfigDialog(self)  # 假设 ConfigDialog 不需要特别的 parent 参数
@@ -36,15 +50,15 @@ class MainWindow(QMainWindow):
     def import_file(self):
         # Import the file once and store the path
         self.file_name = import_excel()
+        self.list_str = json.dumps(self.file_name)
     
     def process_excel(self):
-        file_path = self.file_name  # 获取用户选择的文件路径
-        if file_path:
-            df = pd.read_excel(file_path, engine='openpyxl')  # 使用pandas加载Excel文件
-            print(df.head())  # 显示数据的前几行，或进行其他数据处理操作
+        if self.file_name:
+            print(self.list_str)
+            subprocess.run([sys.executable, "predwindow.py", self.list_str], check=True)
         else:
             print("File loading canceled by the user.")
-
+    
 
     def add_toolbar_actions(self):
         # 添加 'Import' 动作
